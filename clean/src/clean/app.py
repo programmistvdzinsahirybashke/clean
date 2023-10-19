@@ -142,7 +142,7 @@ class clean(toga.App):
         current_datetime_result = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
 
         result = f"""=============================================
-Sotrudnik {employee_id_result} ubralsya po adresu = {address_result}
+Sotrudnik {employee_id_result} prodelal raboty po adresu = {address_result}
 Date = {current_datetime_result}
 Tip yborki = {work_type_result}
 Kommentarii = {comment_result}
