@@ -100,3 +100,49 @@ def select():
     # print(employee_id)
 
 select()
+
+# auth_main_box = toga.Box(style=Pack(direction=COLUMN))
+#
+# login_label = toga.Label(
+#     "Введите логин: ",
+#     style=Pack(padding=(0, 0, 2, 0))
+# )
+# password_label = toga.Label(
+#     "Введите пароль: ",
+#     style=Pack(padding=(10, 0, 2, 0))
+# )
+#
+# self.login_input = toga.TextInput(style=Pack(flex=2, padding=(0, 0, 5, 0)))
+# self.password_input = toga.TextInput(style=Pack(flex=2, padding=(0, 0, 5, 0)))
+#
+# auth_box = toga.Box(style=Pack(direction=COLUMN, padding=5))
+# auth_box.add(login_label, self.login_input, password_label, self.password_input)
+#
+# login_button = toga.Button(
+#     "Войти",
+#     on_press=self.insert_journal,
+#     style=Pack(padding=5)
+# )
+#
+# auth_main_box.add(auth_box)
+# auth_main_box.add(login_button)
+#
+# self.auth_window = toga.Window(title=self.formal_name)
+# self.auth_window.content = auth_main_box
+# self.auth_window.show()
+
+
+def login(login, passw, signal):
+    cur = conn.cursor()
+
+    # Проверяем есть ли такой пользователь
+    cur.execute(f'SELECT * FROM users WHERE name="{login}";')
+    value = cur.fetchall()
+
+    if value != [] and value[0][2] == passw:
+        signal.emit('Успешная авторизация!')
+    else:
+        signal.emit('Проверьте правильность ввода данных!')
+
+    cur.close()
+    conn.close()
