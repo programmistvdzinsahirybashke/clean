@@ -54,29 +54,42 @@ class clean(toga.App):
             print(e)
             print('Can`t establish connection to database')
 
-        # user_login = self.login_input.value
-        # user_password = self.password_input.value
-        #
-        # if len(user_login) == 0:
-        #     return
-        #
-        # if len(user_password) == 0:
-        #     return
-        #
-        # cur.execute(f'SELECT password FROM users WHERE login="{user_login}"')
-        # check_pass = cur.fetchall()
-        #
-        # cur.execute(f'SELECT login FROM users WHERE login="{user_login}"')
-        # check_login = cur.fetchall()
-        #
-        # if check_pass[0][0] == user_password and check_login[0][0] == user_login:
-        #     self.label.setText('Успешная авторизация!')
-        # else:
-        #     self.label.setText('Ошибка авторизации!')
+        cur.execute('SELECT пароль FROM Сотрудник WHERE логин = %s;', (self.login_input.value,))
+        check_pass = cur.fetchall()
 
-        self.main_window.hide()
-        self.create_journal_window()
-        self.journal_window.show()
+        cur.execute(f'SELECT логин FROM Сотрудник WHERE пароль =%s;', (self.password_input.value,))
+        check_login = cur.fetchall()
+
+        if len(self.login_input.value) == 0:
+            print('login is empty')
+            return
+
+        if len(self.password_input.value) == 0:
+            print('password is empty')
+            return
+
+        if check_pass[0][0] == self.password_input.value and check_login[0][0] == self.login_input.value:
+            select_employee_id_on_login_query = """SELECT сотрудник_id 
+            FROM Сотрудник 
+            WHERE логин = %s AND пароль = %s;"""
+            cur.execute(select_employee_id_on_login_query,(self.login_input.value, self.password_input.value,))
+            employee_id = cur.fetchone()
+            self.employee_id = employee_id[0]
+            self.main_window.hide()
+            self.create_journal_window()
+            self.journal_window.show()
+            print(f"""====================================
+Successfull login! 
+Employee_id = {self.employee_id}
+Password = {self.password_input.value}
+Login = {self.login_input.value}
+====================================
+""")
+        else:
+            print('Login =', self.login_input.value)
+            print('Password =', self.password_input.value)
+            print('Error!')
+            return
 
     def create_journal_window(self):
         try:
@@ -113,8 +126,6 @@ class clean(toga.App):
             "Введите комментарий: ",
             style=Pack(padding=(10, 0, 2, 0))
         )
-
-        self.employee_id = 8
 
         select_employee_full_name_query = """SELECT фамилия, имя, отчество
                 FROM Сотрудник
