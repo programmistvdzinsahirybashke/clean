@@ -4,14 +4,56 @@ clean app
 """
 import toga
 from toga.style import Pack
-from toga.style.pack import COLUMN, ROW
+from toga.style.pack import COLUMN
 import psycopg2 as db
 import datetime
 from psycopg2 import sql
 
 
-class clean(toga.App):
+class Clean(toga.App):
+    def __init__(
+            self,
+            formal_name=None,
+            app_id=None,
+            app_name=None,
+            id=None,
+            icon=None,
+            author=None,
+            version=None,
+            home_page=None,
+            description=None,
+            startup=None,
+            windows=None,
+            on_exit=None,
+            factory=None,  # DEPRECATED !
+    ):
+        super().__init__(formal_name, app_id, app_name, id, icon, author, version, home_page, description, startup,
+                         windows, on_exit, factory)
+        self.comments_input = None
+        self.journal_window = None
+        self.work_type_selection = None
+        self.date = None
+        self.employee_id = None
+        self.address_input = None
+        self.employee_journal_input = None
+        self.employee_full_name = None
+        self.password_input = None
+        self.login_input = None
+        self.cur = None
+        self.conn = None
+
     def startup(self):
+        try:
+            # пытаемся подключиться к базе данных
+            self.conn = db.connect(dbname='cleandb', user='postgres', password='123', host='localhost')
+            print('Established connection to database')
+            # Создание объекта курсора для выполнения SQL-запросов
+            self.cur = self.conn.cursor()
+        except Exception as e:
+            # в случае сбоя подключения будет выведено сообщение в консоли
+            print(e)
+            print('Can`t establish connection to database')
+
         login_label = toga.Label(
             "Введите логин: ",
             style=Pack(padding=(0, 0, 2, 0))
@@ -43,22 +85,11 @@ class clean(toga.App):
         self.main_window.show()
 
     def user_login(self, widget):
-        try:
-            # пытаемся подключиться к базе данных
-            conn = db.connect(dbname='cleandb', user='postgres', password='123', host='localhost')
-            print('Established connection to database')
-            # Создание объекта курсора для выполнения SQL-запросов
-            cur = conn.cursor()
-        except Exception as e:
-            # в случае сбоя подключения будет выведено сообщение в консоли
-            print(e)
-            print('Can`t establish connection to database')
+        self.cur.execute('SELECT пароль FROM Сотрудник WHERE логин = %s;', (self.login_input.value,))
+        check_pass = self.cur.fetchall()
 
-        cur.execute('SELECT пароль FROM Сотрудник WHERE логин = %s;', (self.login_input.value,))
-        check_pass = cur.fetchall()
-
-        cur.execute(f'SELECT логин FROM Сотрудник WHERE пароль =%s;', (self.password_input.value,))
-        check_login = cur.fetchall()
+        self.cur.execute(f'SELECT логин FROM Сотрудник WHERE пароль =%s;', (self.password_input.value,))
+        check_login = self.cur.fetchall()
 
         if len(self.login_input.value) == 0:
             print('login is empty')
@@ -72,37 +103,35 @@ class clean(toga.App):
             select_employee_id_on_login_query = """SELECT сотрудник_id 
             FROM Сотрудник 
             WHERE логин = %s AND пароль = %s;"""
-            cur.execute(select_employee_id_on_login_query,(self.login_input.value, self.password_input.value,))
-            employee_id = cur.fetchone()
+            self.cur.execute(select_employee_id_on_login_query, (self.login_input.value, self.password_input.value,))
+            employee_id = self.cur.fetchone()
             self.employee_id = employee_id[0]
             self.main_window.hide()
             self.create_journal_window()
             self.journal_window.show()
             print(f"""====================================
-Successfull login! 
+Successfully login! 
 Employee_id = {self.employee_id}
-Password = {self.password_input.value}
 Login = {self.login_input.value}
+Password = {self.password_input.value}
 ====================================
-""")
+        """)
         else:
-            print('Login =', self.login_input.value)
-            print('Password =', self.password_input.value)
-            print('Error!')
+            print(f"""====================================
+Error while logging in! 
+Login = {self.login_input.value}
+Password = {self.password_input.value}
+====================================
+            """)
             return
 
-    def create_journal_window(self):
-        try:
-            # пытаемся подключиться к базе данных
-            conn = db.connect(dbname='cleandb', user='postgres', password='123', host='localhost')
-            print('Established connection to database')
-            # Создание объекта курсора для выполнения SQL-запросов
-            cur = conn.cursor()
-        except Exception as e:
-            # в случае сбоя подключения будет выведено сообщение в консоли
-            print(e)
-            print('Can`t establish connection to database')
+    def user_logout(self, widget):
+        self.login_input.clear()
+        self.password_input.clear()
+        self.main_window.show()
+        self.journal_window.hide()
 
+    def create_journal_window(self):
         self.main_window.hide()
         main_box = toga.Box(style=Pack(direction=COLUMN))
 
@@ -131,21 +160,16 @@ Login = {self.login_input.value}
                 FROM Сотрудник
                 INNER JOIN Двор ON Сотрудник.двор_id = Двор.двор_id
                 WHERE сотрудник_id = %s;"""
-        cur.execute(select_employee_full_name_query, (self.employee_id,))
-        self.employee_full_name = cur.fetchone()
-
-        if self.employee_full_name:
-            surname, name, patronymic = self.employee_full_name
-            self.employee_journal_input = toga.TextInput(
-                value=self.employee_full_name[0] + " " + self.employee_full_name[1] + " " + self.employee_full_name[2],
-                readonly=True)
+        self.cur.execute(select_employee_full_name_query, (self.employee_id,))
+        self.employee_full_name = self.cur.fetchone()
+        self.employee_journal_input = toga.TextInput(value=self.employee_full_name[0] + " " + self.employee_full_name[1] + " " + self.employee_full_name[2], readonly=True)
 
         select_employee_work_address_query = """SELECT адрес
                 FROM Сотрудник
                 INNER JOIN Двор ON Сотрудник.двор_id = Двор.двор_id
                 WHERE сотрудник_id = %s;"""
-        cur.execute(select_employee_work_address_query, (self.employee_id,))
-        employee_work_address = cur.fetchone()
+        self.cur.execute(select_employee_work_address_query, (self.employee_id,))
+        employee_work_address = self.cur.fetchone()
         employee_work_address = employee_work_address[0]
         self.address_input = toga.TextInput(value=employee_work_address, readonly=True)
 
@@ -154,8 +178,8 @@ Login = {self.login_input.value}
 
         select_all_work_types_query = """SELECT название
                 FROM Тип_уборки"""
-        cur.execute(select_all_work_types_query)
-        work_types_tuple = cur.fetchall()
+        self.cur.execute(select_all_work_types_query)
+        work_types_tuple = self.cur.fetchall()
         work_types = []
         for work_type in work_types_tuple:
             work_types.append(work_type[0])
@@ -167,53 +191,49 @@ Login = {self.login_input.value}
         name_box.add(employee_label, self.employee_journal_input, address_label, self.address_input, date_label,
                      self.date, type_label, self.work_type_selection, comment_label, self.comments_input)
 
-        button = toga.Button(
+        add_journal_entry_button = toga.Button(
             "Добавить уборку в журнал",
             on_press=self.insert_into_journal,
             style=Pack(padding=5)
         )
 
+        logout_button = toga.Button(
+            "Выйти",
+            on_press=self.user_logout,
+            style=Pack(padding=5)
+        )
+
         main_box.add(name_box)
-        main_box.add(button)
+        main_box.add(add_journal_entry_button)
+        main_box.add(logout_button)
 
         self.journal_window = toga.MainWindow(title="Журнал уборки")
         self.windows.add(self.journal_window)
         self.journal_window.content = main_box
 
     def insert_into_journal(self, widget):
-        try:
-            # пытаемся подключиться к базе данных
-            conn = db.connect(dbname='cleandb', user='postgres', password='123', host='localhost')
-            print('Established connection to database')
-            # Создание объекта курсора для выполнения SQL-запросов
-            cur = conn.cursor()
-        except Exception as e:
-            # в случае сбоя подключения будет выведено сообщение в консоли
-            print(e)
-            print('Can`t establish connection to database')
-
         select_employee_id_by_full_name_query = """SELECT сотрудник_id 
         FROM Сотрудник 
         WHERE фамилия = %s AND имя = %s AND отчество = %s;"""
-        cur.execute(select_employee_id_by_full_name_query,
-                    (self.employee_full_name[0], self.employee_full_name[1], self.employee_full_name[2],))
-        employee_id = cur.fetchone()
+        self.cur.execute(select_employee_id_by_full_name_query,
+                         (self.employee_full_name[0], self.employee_full_name[1], self.employee_full_name[2],))
+        employee_id = self.cur.fetchone()
         employee_id_result = employee_id[0]
 
         select_courtyard_id_by_employee_id_query = """SELECT Двор.двор_id 
         FROM Двор 
         INNER JOIN Сотрудник ON Сотрудник.двор_id = Двор.двор_id 
         WHERE сотрудник_id = %s;"""
-        cur.execute(select_courtyard_id_by_employee_id_query, (self.employee_id,))
-        employees_adresses = cur.fetchone()
-        address_result = employees_adresses[0]
+        self.cur.execute(select_courtyard_id_by_employee_id_query, (self.employee_id,))
+        employees_addresses = self.cur.fetchone()
+        address_result = employees_addresses[0]
 
         work_type_selected = self.work_type_selection.value
         select_query = """SELECT тип_уборки_id 
         FROM Тип_уборки 
         WHERE название = %s;"""
-        cur.execute(select_query, (work_type_selected,))
-        work_type = cur.fetchone()
+        self.cur.execute(select_query, (work_type_selected,))
+        work_type = self.cur.fetchone()
         work_type_result = work_type[0]
 
         comment_result = self.comments_input.value
@@ -239,11 +259,10 @@ Kommentarii = {comment_result}
             sql.Literal(comment_result)
         )
         # Выполнение SQL-запроса
-        cur.execute(insert_result_query)
+        self.cur.execute(insert_result_query)
         # Подтверждение изменений и закрытие соединения
-        conn.commit()
-        conn.close()
+        self.conn.commit()
 
 
 def main():
-    return clean()
+    return Clean()
