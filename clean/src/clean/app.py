@@ -4,7 +4,7 @@ clean app
 """
 import toga
 from toga.style import Pack
-from toga.style.pack import COLUMN
+from toga.style.pack import *
 import psycopg2 as db
 import datetime
 from psycopg2 import sql
@@ -29,6 +29,7 @@ class Clean(toga.App):
     ):
         super().__init__(formal_name, app_id, app_name, id, icon, author, version, home_page, description, startup,
                          windows, on_exit, factory)
+        self.alert_window = None
         self.comments_input = None
         self.journal_window = None
         self.work_type_selection = None
@@ -56,50 +57,48 @@ class Clean(toga.App):
 
         login_label = toga.Label(
             "Введите логин: ",
-            style=Pack(padding=(0, 0, 2, 0))
+            style=Pack(padding=(0, 8, 5, 8), font_family="montserrat", font_size=12)
         )
         password_label = toga.Label(
             "Введите пароль: ",
-            style=Pack(padding=(10, 0, 2, 0))
+            style=Pack(padding=(0, 0, 5, 8), font_family="montserrat", font_size=12)
         )
-
         login_button = toga.Button(
             "Войти",
             on_press=self.user_login,
-            style=Pack(padding=5)
+            style=Pack(width=300, padding=(0, 30, 5, 8), font_family="montserrat", font_size=14)
         )
 
-        self.login_input = toga.TextInput(style=Pack(flex=2, padding=(0, 0, 5, 0)))
-        self.password_input = toga.TextInput(style=Pack(flex=2, padding=(0, 0, 5, 0)))
-
         auth_main_box = toga.Box(style=Pack(direction=COLUMN))
+        login_box = toga.Box(style=Pack(direction=ROW))
+        password_box = toga.Box(style=Pack(direction=ROW))
 
-        auth_box = toga.Box(style=Pack(direction=COLUMN, padding=5))
-        auth_box.add(login_label, self.login_input, password_label, self.password_input)
+        self.login_input = toga.TextInput(
+            style=Pack(width=150, padding=(0, 35, 0, -1), font_family="montserrat",  font_size=10))
+        self.password_input = toga.PasswordInput(
+            style=Pack(width=150, padding=(0, 35, 0, -3), font_family="montserrat",  font_size=10))
 
-        auth_main_box.add(auth_box)
+        login_box.add(login_label, self.login_input)
+        password_box.add(password_label, self.password_input)
+
+        auth_main_box.add(login_box)
+        auth_main_box.add(password_box)
         auth_main_box.add(login_button)
 
-        self.main_window = toga.MainWindow(title="Авторизация")
+        self.main_window = toga.MainWindow(title="Авторизация", size=(200, 170), resizeable=False)
         self.main_window.content = auth_main_box
         self.main_window.show()
 
     def user_login(self, widget):
         self.cur.execute('SELECT пароль FROM Сотрудник WHERE логин = %s;', (self.login_input.value,))
         check_pass = self.cur.fetchall()
-
+        print(check_pass)
         self.cur.execute(f'SELECT логин FROM Сотрудник WHERE пароль =%s;', (self.password_input.value,))
         check_login = self.cur.fetchall()
+        print(check_login)
 
-        if len(self.login_input.value) == 0:
-            print('login is empty')
-            return
-
-        if len(self.password_input.value) == 0:
-            print('password is empty')
-            return
-
-        if check_pass[0][0] == self.password_input.value and check_login[0][0] == self.login_input.value:
+        if check_pass and check_pass[0][0] == self.password_input.value and check_login and check_login[0][
+            0] == self.login_input.value:
             select_employee_id_on_login_query = """SELECT сотрудник_id 
             FROM Сотрудник 
             WHERE логин = %s AND пароль = %s;"""
@@ -117,6 +116,8 @@ Password = {self.password_input.value}
 ====================================
         """)
         else:
+            self.main_window.error_dialog("Неверный логин или пароль",
+                                          "Вы ввели неверный логин или пароль. Попробуйте еще раз.")
             print(f"""====================================
 Error while logging in! 
 Login = {self.login_input.value}
@@ -162,7 +163,9 @@ Password = {self.password_input.value}
                 WHERE сотрудник_id = %s;"""
         self.cur.execute(select_employee_full_name_query, (self.employee_id,))
         self.employee_full_name = self.cur.fetchone()
-        self.employee_journal_input = toga.TextInput(value=self.employee_full_name[0] + " " + self.employee_full_name[1] + " " + self.employee_full_name[2], readonly=True)
+        self.employee_journal_input = toga.TextInput(
+            value=self.employee_full_name[0] + " " + self.employee_full_name[1] + " " + self.employee_full_name[2],
+            readonly=True)
 
         select_employee_work_address_query = """SELECT адрес
                 FROM Сотрудник
@@ -207,7 +210,7 @@ Password = {self.password_input.value}
         main_box.add(add_journal_entry_button)
         main_box.add(logout_button)
 
-        self.journal_window = toga.MainWindow(title="Журнал уборки")
+        self.journal_window = toga.MainWindow(title="Журнал уборки", resizeable=False)
         self.windows.add(self.journal_window)
         self.journal_window.content = main_box
 
