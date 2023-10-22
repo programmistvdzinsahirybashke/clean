@@ -1,0 +1,98 @@
+-- Создание таблицы "Дворы"
+create TABLE Дворы (
+    двор_id serial PRIMARY KEY,
+    адрес varchar NOT NULL,
+    площадь float
+);
+
+-- Создание таблицы "Должности"
+create TABLE Должности (
+    должность_id serial PRIMARY KEY,
+    название varchar,
+    описание varchar
+);
+
+-- Создание таблицы "Типы работ"
+CREATE TABLE Типы_работ (
+    тип_работы_id serial PRIMARY KEY,
+    название varchar,
+    описание varchar
+);
+
+-- Создание таблицы "Должности_и_типы_работ"
+CREATE TABLE Должности_и_типы_работ (
+    должность_и_тип_работы_id integer,
+    должность integer REFERENCES Должности(должность_id),
+    тип_работы integer REFERENCES Типы_работ(тип_работы_id)
+);
+
+-- Создание таблицы "Сотрудники"
+create TABLE Сотрудники (
+    сотрудник_id serial PRIMARY KEY,
+    двор_id integer REFERENCES Дворы(двор_id),
+    должность int REFERENCES Должности(должность_id),
+    фамилия varchar,
+    имя varchar,
+    отчество varchar,
+    серия_номер_паспорта varchar,
+    адрес_жительства varchar,
+    контактная_информация varchar,
+	логин varchar UNIQUE,
+	пароль varchar
+);
+
+
+-- Создание таблицы "Журнал уборки"
+CREATE TABLE Журнал_уборки (
+    журнал_id serial PRIMARY KEY,
+    дата_и_время_уборки timestamp,
+    сотрудник_id integer REFERENCES Сотрудники(сотрудник_id),
+    двор_id integer REFERENCES Дворы(двор_id),
+    тип_работ integer REFERENCES Типы_работ(тип_работы_id),
+    комментарий varchar
+);
+
+-- Создание таблицы "Инструменты"
+CREATE TABLE Инструменты (
+    инструмент_id serial PRIMARY KEY,
+    сотрудник_id integer REFERENCES Сотрудники(сотрудник_id),
+    название varchar,
+    описание varchar,
+    доступность boolean
+);
+
+-- Создание таблицы "Жители"
+CREATE TABLE Жители (
+    житель_id serial PRIMARY KEY,
+	фамилия varchar,
+    имя varchar,
+    контактная_информация varchar UNIQUE
+);
+
+CREATE TABLE public."Жалобы_и_предложения" (
+	обращение_id int4 NOT NULL DEFAULT nextval('"Жалобы_и_предложени_обращение_id_seq"'::regclass),
+	двор_id int4 NULL,
+	текст varchar NULL,
+	дата_и_время_подачи timestamp NULL,
+	житель_id int4 NULL,
+	CONSTRAINT "Жалобы_и_предложения_pkey" PRIMARY KEY ("обращение_id"),
+	CONSTRAINT "Жалобы_и_предложения_двор_id_fkey" FOREIGN KEY (двор_id) REFERENCES public."Дворы"(двор_id),
+	CONSTRAINT жалобы_и_предложения_fk FOREIGN KEY (житель_id) REFERENCES public."Жители"(житель_id)
+);
+
+--
+--
+--========================================================================
+---- Заполнение таблицы "Должности" (минимум 10 записей)
+--INSERT INTO Должности (название, описание)
+--VALUES
+--    ('Директор', 'Управление двором'),
+--    ('Уборщик', 'Уборка территории'),
+--    ('Менеджер', 'Контроль и организация'),
+--    ('Смотритель', 'Поддержание порядка'),
+--    ('Агент', 'Контакт с жителями'),
+--    ('Строитель', 'Строительные работы'),
+--    ('Техник', 'Техническое обслуживание'),
+--    ('Охранник', 'Охрана территории'),
+--    ('Садовник', 'Уход за зеленью'),
+--    ('Приемщик жалоб', 'Работа с жалобами');

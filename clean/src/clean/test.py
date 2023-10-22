@@ -99,7 +99,7 @@ def select():
     #
     # print(employee_id)
 
-select()
+# select()
 
 # auth_main_box = toga.Box(style=Pack(direction=COLUMN))
 #
@@ -131,18 +131,19 @@ select()
 # self.auth_window.content = auth_main_box
 # self.auth_window.show()
 
+# employee_id = 1
+# select_employees_work_types_query = """SELECT название
+# FROM Типы_работ
+# inner join Должности_и_типы_работ on Типы_работ.тип_работы_id = Должности_и_типы_работ.тип_работы
+# inner join Сотрудники on Сотрудники.должность = Должности_и_типы_работ.должность
+# where Сотрудники.сотрудник_id = %s;"""
+# cur.execute(select_employees_work_types_query, (employee_id,))
 
-def login(login, passw, signal):
-    cur = conn.cursor()
-
-    # Проверяем есть ли такой пользователь
-    cur.execute(f'SELECT * FROM users WHERE name="{login}";')
-    value = cur.fetchall()
-
-    if value != [] and value[0][2] == passw:
-        signal.emit('Успешная авторизация!')
-    else:
-        signal.emit('Проверьте правильность ввода данных!')
-
-    cur.close()
-    conn.close()
+address_selected = "Альметьевск, Улица Лесная, 123"
+select_address_id_query = """SELECT двор_id
+FROM Дворы
+WHERE адрес = %s;"""
+cur.execute(select_address_id_query, (address_selected,))
+address = cur.fetchone()
+address_result = address[0]
+print(address_result)
