@@ -2,12 +2,11 @@
 """
 clean app
 """
-import toga
-from toga.style import Pack
-from toga.style.pack import *
-import psycopg2 as db
 import datetime
+import psycopg2 as db
+import toga
 from psycopg2 import sql
+from toga.style.pack import *
 
 
 class Clean(toga.App):
@@ -29,6 +28,16 @@ class Clean(toga.App):
     ):
         super().__init__(formal_name, app_id, app_name, id, icon, author, version, home_page, description, startup,
                          windows, on_exit, factory)
+        self.work_types = None
+        self.address_selected = None
+        self.employee_id_result = None
+        self.address_id_result = None
+        self.work_type_id_result = None
+        self.comments_result = None
+        self.journal_insert_time_result = None
+        self.work_type_selected = None
+        self.employee_work_address = None
+        self.all_addresses = None
         self.journal_insert_datetime = None
         self.inhabitant_id_result = None
         self.address_result = None
@@ -127,21 +136,10 @@ class Clean(toga.App):
             employee_id = self.cur.fetchone()
             self.employee_id = employee_id[0]
             self.open_journal_window(widget)
-            print("====================================\n"
-                  "Successfully login!\n"
-                  f"Employee_id = {self.employee_id}\n"
-                  f"Login = {self.login_input.value}\n"
-                  f"Password = {self.password_input.value}\n"
-                  "====================================")
         else:
             # Вызов диалогового окна с ошибкой неправильного логина или пароля
             self.main_window.error_dialog("Неверный логин или пароль",
                                           "Вы ввели неверный логин или пароль. Попробуйте еще раз.")
-            print("====================================\n"
-                  "Error while logging in!\n"
-                  f"Login = {self.login_input.value}\n"
-                  f"Password = {self.password_input.value}\n"
-                  "====================================")
             return
 
     def create_feedback_window(self):
@@ -173,18 +171,18 @@ class Clean(toga.App):
             style=Pack(padding=(0, 20, 5, 20), font_family="montserrat", font_size=12))
         self.inhabitant_phone_input = toga.TextInput(
             style=Pack(padding=(0, 20, 5, 20), font_family="montserrat", font_size=12))
-        self.appeal_text_input = toga.TextInput(
-            style=Pack(flex=2, padding=(0, 20, 5, 20), font_family="montserrat", font_size=12))
+        self.appeal_text_input = toga.MultilineTextInput(
+            style=Pack(flex=2, height=100, padding=(0, 20, 5, 20), font_family="montserrat", font_size=12))
 
         # Создание списка всех адресов
         select_all_addresses_query = """SELECT адрес FROM Дворы"""
         self.cur.execute(select_all_addresses_query)
         all_addresses_tuple = self.cur.fetchall()
-        all_addresses = []
+        self.all_addresses = []
         for address in all_addresses_tuple:
-            all_addresses.append(address[0])
+            self.all_addresses.append(address[0])
         # Выпадающий список с адресами
-        self.address_selection = toga.Selection(items=all_addresses, style=Pack(padding=(0, 20, 5, 20)))
+        self.address_selection = toga.Selection(items=self.all_addresses, style=Pack(padding=(0, 20, 5, 20)))
         # Создание кнопок окна с обращениями
         send_feedback_button = toga.Button(
             "Отправить обращение",
@@ -192,7 +190,7 @@ class Clean(toga.App):
             style=Pack(flex=1, padding=(0, 20, 5, 20), font_family="montserrat", font_size=16)
         )
         cancel_button = toga.Button(
-            "Отмена",
+            "Выход",
             on_press=self.close_feedback_window,
             style=Pack(flex=1, padding=(0, 30, 5, 20), font_family="montserrat", font_size=16)
         )
@@ -230,11 +228,11 @@ class Clean(toga.App):
         self.cur.execute(insert_inhabitant_full_name_query)
 
         # Получение выбранного жителем из списка адреса
-        address_selected = self.address_selection.value
+        self.address_selected = self.address_selection.value
         select_address_id_query = """SELECT двор_id
         FROM Дворы
         WHERE адрес = %s;"""
-        self.cur.execute(select_address_id_query, (address_selected,))
+        self.cur.execute(select_address_id_query, (self.address_selected,))
         address = self.cur.fetchone()
         self.address_result = address[0]
 
@@ -246,7 +244,7 @@ class Clean(toga.App):
         FROM Жители
         WHERE фамилия = %s AND имя = %s AND контактная_информация = %s;"""
         self.cur.execute(select_inhabitant_id_by_full_name_query, (
-        self.inhabitant_surname_input.value, self.inhabitant_name_input.value, self.inhabitant_phone_input.value,))
+            self.inhabitant_surname_input.value, self.inhabitant_name_input.value, self.inhabitant_phone_input.value,))
         inhabitant_id = self.cur.fetchone()
         self.inhabitant_id_result = inhabitant_id[0]
 
@@ -263,6 +261,20 @@ class Clean(toga.App):
         self.cur.execute(insert_feedback_query)
         # Подтверждение изменений
         self.conn.commit()
+
+        self.feedback_window.info_dialog(title="Ваше обращение отправлено",
+                                         message="Содержимое вашего обращения:\n\n"
+                                                 f"Фамилия: {self.inhabitant_surname_input.value}\n\n"
+                                                 f"Имя: {self.inhabitant_name_input.value}\n\n"
+                                                 f"Адрес: {self.address_selected}\n\n"
+                                                 f"Контактная информация: {self.inhabitant_phone_input.value}\n\n"
+                                                 f"Текст обращения: {self.appeal_text_input.value}\n\n"
+                                         )
+        self.inhabitant_surname_input.clear()
+        self.inhabitant_name_input.clear()
+        self.address_selection.value = self.all_addresses[0]
+        self.inhabitant_phone_input.clear()
+        self.appeal_text_input.clear()
 
     def open_journal_window(self, widget):
         self.main_window.hide()
@@ -324,8 +336,8 @@ class Clean(toga.App):
         WHERE сотрудник_id = %s;"""
         self.cur.execute(select_employee_work_address_query, (self.employee_id,))
         employee_work_address = self.cur.fetchone()
-        employee_work_address = employee_work_address[0]
-        self.address_input = toga.TextInput(value=employee_work_address, readonly=True,
+        self.employee_work_address = employee_work_address[0]
+        self.address_input = toga.TextInput(value=self.employee_work_address, readonly=True,
                                             style=Pack(padding=(0, 20, 5, 20), font_family="montserrat", font_size=12))
 
         # Получение времени отправки отчета о работе
@@ -341,12 +353,12 @@ class Clean(toga.App):
         where Сотрудники.сотрудник_id = %s;"""
         self.cur.execute(select_employees_work_types_query, (self.employee_id,))
         work_types_tuple = self.cur.fetchall()
-        work_types = []
+        self.work_types = []
         for work_type in work_types_tuple:
-            work_types.append(work_type[0])
+            self.work_types.append(work_type[0])
 
         # Выпадающий список с типами работ
-        self.work_type_selection = toga.Selection(items=work_types, style=Pack(padding=(0, 30, 5, 20)))
+        self.work_type_selection = toga.Selection(items=self.work_types, style=Pack(padding=(0, 30, 5, 20)))
         self.comments_input = toga.TextInput(
             style=Pack(flex=2, padding=(0, 20, 5, 20), font_family="montserrat", font_size=12))
 
@@ -357,7 +369,7 @@ class Clean(toga.App):
             style=Pack(flex=1, padding=(0, 20, 5, 20), font_family="montserrat", font_size=16)
         )
         logout_button = toga.Button(
-            "Выйти",
+            "Выход",
             on_press=self.close_journal_window,
             style=Pack(padding=(0, 20, 5, 20), font_family="montserrat", font_size=16)
         )
@@ -379,7 +391,7 @@ class Clean(toga.App):
         main_box.add(name_box)
         main_box.add(btn_box)
         # Создание окна журнала работ, определение его содержимого и его добавление в список окон программы
-        self.journal_window = toga.Window(title="Журнал уборки", resizeable=False, on_close=self.close_journal_window)
+        self.journal_window = toga.Window(title="Журнал работ", resizeable=False, on_close=self.close_journal_window)
         self.journal_window.content = main_box
         self.windows.add(self.journal_window)
 
@@ -391,7 +403,7 @@ class Clean(toga.App):
         self.cur.execute(select_employee_id_by_full_name_query,
                          (self.employee_full_name[0], self.employee_full_name[1], self.employee_full_name[2],))
         employee_id = self.cur.fetchone()
-        employee_id_result = employee_id[0]
+        self.employee_id_result = employee_id[0]
 
         # Получение id двора в котором работает сотрудник
         select_courtyard_id_by_employee_id_query = """SELECT Дворы.двор_id 
@@ -400,43 +412,47 @@ class Clean(toga.App):
         WHERE сотрудник_id = %s;"""
         self.cur.execute(select_courtyard_id_by_employee_id_query, (self.employee_id,))
         employees_addresses = self.cur.fetchone()
-        address_id_result = employees_addresses[0]
+        self.address_id_result = employees_addresses[0]
 
         # Получение id типа выполненной работы по его названию
-        work_type_selected = self.work_type_selection.value
+        self.work_type_selected = self.work_type_selection.value
         select_query = """SELECT тип_работы_id 
         FROM Типы_работ 
         WHERE название = %s;"""
-        self.cur.execute(select_query, (work_type_selected,))
+        self.cur.execute(select_query, (self.work_type_selected,))
         work_type = self.cur.fetchone()
-        work_type_id_result = work_type[0]
+        self.work_type_id_result = work_type[0]
 
         # Получение id типа выполненной работы по его названию
-        comments_result = self.comments_input.value
+        self.comments_result = self.comments_input.value
         # Получение времени отправки отчета о работе
-        journal_insert_time_result = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
-
-        print(f"=============================================\n"
-              f"Employee №{employee_id_result} did work at address = {address_id_result}\n"
-              f"Date and time = {journal_insert_time_result}\n"
-              f"Work type = {work_type_id_result}\n"
-              f"Comments = {comments_result}\n"
-              "=============================================\n")
+        self.journal_insert_time_result = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
 
         # SQL-запрос для вставки данных в таблицу Журнал работ
         insert_result_query = sql.SQL(
             "INSERT INTO Журнал_уборки (дата_и_время_уборки, сотрудник_id, двор_id, тип_работ, комментарий) VALUES ("
             "{}, {}, {}, {}, {});").format(
-            sql.Literal(journal_insert_time_result),
-            sql.Literal(employee_id_result),
-            sql.Literal(address_id_result),
-            sql.Literal(work_type_id_result),
-            sql.Literal(comments_result)
+            sql.Literal(self.journal_insert_time_result),
+            sql.Literal(self.employee_id_result),
+            sql.Literal(self.address_id_result),
+            sql.Literal(self.work_type_id_result),
+            sql.Literal(self.comments_result)
         )
         # Выполнение SQL-запроса
         self.cur.execute(insert_result_query)
         # Подтверждение изменений
         self.conn.commit()
+
+        self.journal_window.info_dialog(title="Запись добавлена в журнал",
+                                        message="Содержимое записи:\n\n"
+                                                f"Сотрудник: {self.employee_full_name[0]} {self.employee_full_name[1]} {self.employee_full_name[2]}\n\n"
+                                                f"Проделал работу по адресу: {self.employee_work_address}\n\n"
+                                                f"Дата и время добавления записи: {self.journal_insert_time_result}\n\n"
+                                                f"Тип выполненных работ: {self.work_type_selected}\n\n"
+                                                f"Комментарий сотрудника: {self.comments_result}\n\n"
+                                        )
+        self.work_type_selection.value = self.work_types[0]
+        self.comments_input.clear()
 
 
 def main():
