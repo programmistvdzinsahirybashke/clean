@@ -69,15 +69,15 @@ CREATE TABLE Жители (
     контактная_информация varchar UNIQUE
 );
 
-CREATE TABLE public."Жалобы_и_предложения" (
-	обращение_id int4 NOT NULL DEFAULT nextval('"Жалобы_и_предложени_обращение_id_seq"'::regclass),
+CREATE TABLE "Жалобы_и_предложения" (
+	обращение_id int,
 	двор_id int4 NULL,
 	текст varchar NULL,
 	дата_и_время_подачи timestamp NULL,
 	житель_id int4 NULL,
 	CONSTRAINT "Жалобы_и_предложения_pkey" PRIMARY KEY ("обращение_id"),
-	CONSTRAINT "Жалобы_и_предложения_двор_id_fkey" FOREIGN KEY (двор_id) REFERENCES public."Дворы"(двор_id),
-	CONSTRAINT жалобы_и_предложения_fk FOREIGN KEY (житель_id) REFERENCES public."Жители"(житель_id)
+	CONSTRAINT "Жалобы_и_предложения_двор_id_fkey" FOREIGN KEY (двор_id) REFERENCES "Дворы"(двор_id),
+	CONSTRAINT жалобы_и_предложения_fk FOREIGN KEY (житель_id) REFERENCES "Жители"(житель_id)
 );
 
 --
