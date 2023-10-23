@@ -61,15 +61,16 @@ class Clean(toga.App):
         self.cur = None
         self.conn = None
 
+    # Функция, запускающая приложение и открывающая главное окно программы
     def startup(self):
         try:
-            # пытаемся подключиться к базе данных
+            # Пытаемся подключиться к базе данных
             self.conn = db.connect(dbname='cleandb', user='postgres', password='123', host='localhost')
             print('Established connection to database')
             # Создание объекта курсора для выполнения SQL-запросов
             self.cur = self.conn.cursor()
         except Exception as e:
-            # в случае сбоя подключения будет выведено сообщение в консоли
+            # В случае сбоя подключения будет выведено сообщение и текст ошибки в консоли
             print(e)
             print('Can`t establish connection to database')
 
@@ -120,6 +121,7 @@ class Clean(toga.App):
         self.main_window.content = auth_main_box
         self.main_window.show()
 
+    # Функция, проверяющая логин и пароль после нажатия кнопки
     def user_login(self, widget):
         # Получение введенных логина и пароля из базы данных
         self.cur.execute('SELECT пароль FROM Сотрудники WHERE логин = %s;', (self.login_input.value,))
@@ -142,6 +144,7 @@ class Clean(toga.App):
                                           "Вы ввели неверный логин или пароль. Попробуйте еще раз.")
             return
 
+    # Функция, создающая окно отправки обратной связи
     def create_feedback_window(self):
         # Названия полей
         inhabitant_surname_label = toga.Label(
@@ -210,12 +213,13 @@ class Clean(toga.App):
         main_box.add(name_box)
         main_box.add(btn_box)
 
-        # Создание окна с обратной связью
+        # Создание окна отправки обратной связи, определение его содержимого и его добавление в список окон программы
         self.feedback_window = toga.Window(title="Обратная связь", resizeable=False,
                                            on_close=self.close_feedback_window)
         self.feedback_window.content = main_box
         self.windows.add(self.feedback_window)
 
+    # Функция, добавляющая жителя и его обращение в базу данных после нажатия кнопки
     def send_feedback(self, widget):
         # SQL-запрос для вставки данных пользователя в таблицу Жители
         insert_inhabitant_full_name_query = sql.SQL(
@@ -227,7 +231,7 @@ class Clean(toga.App):
         )
         self.cur.execute(insert_inhabitant_full_name_query)
 
-        # Получение выбранного жителем из списка адреса
+        # Получение выбранного жителем адреса из списка
         self.address_selected = self.address_selection.value
         select_address_id_query = """SELECT двор_id
         FROM Дворы
@@ -270,32 +274,38 @@ class Clean(toga.App):
                                                  f"Контактная информация: {self.inhabitant_phone_input.value}\n\n"
                                                  f"Текст обращения: {self.appeal_text_input.value}\n\n"
                                          )
+        # Очистка полей
         self.inhabitant_surname_input.clear()
         self.inhabitant_name_input.clear()
         self.address_selection.value = self.all_addresses[0]
         self.inhabitant_phone_input.clear()
         self.appeal_text_input.clear()
 
+    # Функция, открывающая окно журнала работ
     def open_journal_window(self, widget):
         self.main_window.hide()
         self.create_journal_window()
         self.journal_window.show()
 
+    # Функция, закрывающая окно журнала работ
     def close_journal_window(self, widget):
         self.login_input.clear()
         self.password_input.clear()
         self.main_window.show()
         self.journal_window.hide()
 
+    # Функция, открывающая окно обратной связи
     def open_feedback_window(self, widget):
         self.main_window.hide()
         self.create_feedback_window()
         self.feedback_window.show()
 
+    # Функция, закрывающая окно отправки обратной связи
     def close_feedback_window(self, widget):
         self.feedback_window.hide()
         self.main_window.show()
 
+    # Функция, создающая окна журнала работ
     def create_journal_window(self):
         # Названия полей
         employee_label = toga.Label(
@@ -395,6 +405,7 @@ class Clean(toga.App):
         self.journal_window.content = main_box
         self.windows.add(self.journal_window)
 
+    # Функция, добавляющая запись в журнал работ после нажатия кнопки
     def insert_into_journal(self, widget):
         # Получение id сотрудника по его данным
         select_employee_id_by_full_name_query = """SELECT сотрудник_id 
@@ -451,6 +462,7 @@ class Clean(toga.App):
                                                 f"Тип выполненных работ: {self.work_type_selected}\n\n"
                                                 f"Комментарий сотрудника: {self.comments_result}\n\n"
                                         )
+        # Очистка полей
         self.work_type_selection.value = self.work_types[0]
         self.comments_input.clear()
 
