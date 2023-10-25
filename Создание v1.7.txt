@@ -1,0 +1,109 @@
+-- Создание таблицы "Города"
+create TABLE Города (
+    город_id serial PRIMARY KEY,
+    название varchar NOT NULL
+);
+
+-- Создание таблицы "Улицы"
+create TABLE Улицы (
+    улица_id serial PRIMARY KEY,
+    название varchar NOT NULL,
+    номер int
+);
+
+-- Создание таблицы "Дворы"
+create TABLE Дворы (
+    двор_id serial PRIMARY KEY,
+    город integer REFERENCES Города(город_id),
+    улица integer REFERENCES Улицы(улица_id)
+);
+
+-- Создание таблицы "Должности"
+create TABLE Должности (
+    должность_id serial PRIMARY KEY,
+    название varchar,
+    описание varchar
+);
+
+-- Создание таблицы "Типы работ"
+CREATE TABLE Типы_работ (
+    тип_работы_id serial PRIMARY KEY,
+    название varchar,
+    описание varchar
+);
+
+-- Создание таблицы "Должности_и_типы_работ"
+CREATE TABLE Должности_и_типы_работ (
+    должность_и_тип_работы_id integer,
+    должность integer REFERENCES Должности(должность_id),
+    тип_работы integer REFERENCES Типы_работ(тип_работы_id)
+);
+
+-- Создание таблицы "Сотрудники"
+create TABLE Сотрудники (
+    сотрудник_id serial PRIMARY KEY,
+    должность int REFERENCES Должности(должность_id),
+    фамилия varchar,
+    имя varchar,
+    отчество varchar,
+    серия_номер_паспорта varchar,
+    адрес_жительства varchar,
+    контактная_информация varchar,
+    логин varchar UNIQUE,
+    пароль varchar
+);
+
+-- Создание таблицы "Сотрудники и дворы"
+CREATE TABLE Сотрудники_и_дворы(
+    двор_сотрудника_id serial PRIMARY KEY,
+    сотрудник integer REFERENCES Сотрудники(сотрудник_id),   
+    двор integer REFERENCES Дворы(двор_id)
+);
+
+
+-- Создание таблицы "Журнал уборки"
+CREATE TABLE Журнал_уборки (
+    журнал_id serial PRIMARY KEY,
+    двор_и_сотрудник integer REFERENCES Сотрудники_и_дворы(двор_сотрудника_id),
+    тип_работ integer REFERENCES Типы_работ(тип_работы_id),
+    дата_и_время_уборки timestamp,
+    комментарий varchar
+);
+
+-- Создание таблицы "Инструменты"
+CREATE TABLE Инструменты (
+    инструмент_id serial PRIMARY KEY,
+    название varchar,
+    описание varchar,
+    доступность boolean
+);
+
+-- Создание таблицы "Сотрудники и инструменты"
+CREATE TABLE Сотрудники_и_инструменты (
+    инструмент_сотрудника_id serial PRIMARY KEY,
+    сотрудник_id integer REFERENCES Сотрудники(сотрудник_id),   
+    инструмент_id integer REFERENCES Инструменты(инструмент_id)
+);
+
+-- Создание таблицы "Жители"
+CREATE TABLE Жители (
+    житель_id serial PRIMARY KEY,
+    фамилия varchar,
+    имя varchar,
+    контактная_информация varchar UNIQUE
+);
+
+CREATE TABLE "Жалобы_и_предложения" (
+    обращение_id serial PRIMARY KEY,
+    двор_id int4 NULL,
+    текст varchar NULL,
+    дата_и_время_подачи timestamp NULL,
+    житель_id int4 NULL,
+    CONSTRAINT "Жалобы_и_предложения_двор_id_fkey" FOREIGN KEY (двор_id) REFERENCES "Дворы"(двор_id),
+    CONSTRAINT жалобы_и_предложения_fk FOREIGN KEY (житель_id) REFERENCES "Жители"(житель_id)
+);
+
+
+
+
+

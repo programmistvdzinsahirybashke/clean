@@ -5,7 +5,7 @@ from psycopg2 import sql
 
 try:
     # пытаемся подключиться к базе данных
-    conn = db.connect(dbname='cleandb', user='postgres', password='123', host='localhost')
+    conn = db.connect(dbname='postgres', user='postgres', password='123', host='localhost')
     print('Established connection to database')
     # Создание объекта курсора для выполнения SQL-запросов
     cur = conn.cursor()
@@ -54,18 +54,18 @@ def print_all():
     conn.commit()
     conn.close()
 
-
-def list():
-    employee_id = 1
-    select_query = """SELECT адрес FROM Сотрудник 
-    INNER JOIN Двор ON Сотрудник.двор_id = Двор.двор_id 
-    WHERE сотрудник_id = %s;"""
-    cur.execute(select_query, (employee_id,))
-    employees_adresses_tuple = cur.fetchall()
-    employees_adresses = []
-    for address in employees_adresses_tuple:
-        address = str(address)
-        employees_adresses.append(address)
+#
+# def list():
+#     employee_id = 1
+#     select_query = """SELECT адрес FROM Сотрудник
+#     INNER JOIN Двор ON Сотрудник.двор_id = Двор.двор_id
+#     WHERE сотрудник_id = %s;"""
+#     cur.execute(select_query, (employee_id,))
+#     employees_adresses_tuple = cur.fetchall()
+#     employees_adresses = []
+#     for address in employees_adresses_tuple:
+#         address = str(address)
+#         employees_adresses.append(address)
 
     # selection = toga.Selection(items=employees_adresses)
 
@@ -112,24 +112,24 @@ def select():
 #     style=Pack(padding=(10, 0, 2, 0))
 # )
 #
-# self.login_input = toga.TextInput(style=Pack(flex=2, padding=(0, 0, 5, 0)))
-# self.password_input = toga.TextInput(style=Pack(flex=2, padding=(0, 0, 5, 0)))
+# login_input = toga.TextInput(style=Pack(flex=2, padding=(0, 0, 5, 0)))
+# password_input = toga.TextInput(style=Pack(flex=2, padding=(0, 0, 5, 0)))
 #
 # auth_box = toga.Box(style=Pack(direction=COLUMN, padding=5))
-# auth_box.add(login_label, self.login_input, password_label, self.password_input)
+# auth_box.add(login_label, login_input, password_label, password_input)
 #
 # login_button = toga.Button(
 #     "Войти",
-#     on_press=self.insert_journal,
+#     on_press=insert_journal,
 #     style=Pack(padding=5)
 # )
 #
 # auth_main_box.add(auth_box)
 # auth_main_box.add(login_button)
 #
-# self.auth_window = toga.Window(title=self.formal_name)
-# self.auth_window.content = auth_main_box
-# self.auth_window.show()
+# auth_window = toga.Window(title=formal_name)
+# auth_window.content = auth_main_box
+# auth_window.show()
 
 # employee_id = 1
 # select_employees_work_types_query = """SELECT название
@@ -139,11 +139,25 @@ def select():
 # where Сотрудники.сотрудник_id = %s;"""
 # cur.execute(select_employees_work_types_query, (employee_id,))
 
-address_selected = "Альметьевск, Улица Лесная, 123"
-select_address_id_query = """SELECT двор_id
-FROM Дворы
-WHERE адрес = %s;"""
-cur.execute(select_address_id_query, (address_selected,))
-address = cur.fetchone()
-address_result = address[0]
-print(address_result)
+
+# Получение списка номеров выбранной улицы из выбранного города
+# select_street_numbers_query = """SELECT Улицы.номер
+#           FROM Дворы
+#           inner join Улицы on Дворы.улица  = Улицы.улица_id
+#           inner join Города on Дворы.город  = Города.город_id
+#           inner join Сотрудники_и_дворы on Сотрудники_и_дворы.двор  = Дворы.двор_id
+#           WHERE Города.название = %s and Улицы.название = %s and Сотрудники_и_дворы.сотрудник = 1;"""
+#
+# employee_street_id_result = 'Альметьевск'
+# employee_city_id_result = 'Ленина'
+# cur.execute(select_street_numbers_query, (employee_street_id_result, employee_city_id_result,))
+# all_street_numbers_tuple = cur.fetchall()
+# employee_all_street_numbers = []
+# for street_number in all_street_numbers_tuple:
+#     employee_all_street_numbers.append(str(street_number[0]))
+#
+# print(employee_all_street_numbers)
+
+x = ['Ленина', 'И', 'А', 'Ленина']
+new_employee_all_streets = list(set(x))
+print(new_employee_all_streets, type(new_employee_all_streets))
