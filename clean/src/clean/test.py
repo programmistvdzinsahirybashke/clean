@@ -158,6 +158,22 @@ def select():
 #
 # print(employee_all_street_numbers)
 
-x = ['Ленина', 'И', 'А', 'Ленина']
-new_employee_all_streets = list(set(x))
-print(new_employee_all_streets, type(new_employee_all_streets))
+# Создание списка всех адресов выбранного города
+select_all_street_names_query = """SELECT Улицы.название
+       FROM Улицы
+       inner join Дворы on Дворы.улица  = Улицы.улица_id
+       inner join Города on Дворы.город = Города.город_id
+       WHERE Города.город_id = %s;"""
+
+city_selection = 1
+cur.execute(select_all_street_names_query, (city_selection,))
+all_streets_tuple = cur.fetchall()
+all_streets = []
+
+for street in all_streets_tuple:
+    all_streets.append(street[0])
+print(all_streets)
+
+new_all_streets = []
+[new_all_streets.append(item) for item in all_streets if item not in new_all_streets]
+print(new_all_streets)

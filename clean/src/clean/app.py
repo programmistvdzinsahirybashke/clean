@@ -195,7 +195,7 @@ class Clean(toga.App):
         cancel_button = toga.Button(
             "Выход",
             on_press=self.close_feedback_window,
-            style=Pack(flex=1, padding=(0, 30, 5, 20), font_family="montserrat", font_size=16)
+            style=Pack(flex=1, padding=(0, 18, 5, 20), font_family="montserrat", font_size=16)
         )
 
         # Обработка выбора адреса пользователем
@@ -227,86 +227,78 @@ class Clean(toga.App):
 
     # Функция, создающая список городов и осуществляющая последующие выборы пользователя из выпадающих списков (выбор улицы и номера улицы)
     def inhabitant_select_address(self, *widget):
-        self.city_selection = toga.Selection(items=[], on_select=self.change_city_handler,
-                                             style=Pack(flex=1, padding=(0, 0, 0, 0)))
-        self.street_name_selection = toga.Selection(items=[], style=Pack(flex=1, padding=(0, 5, 0, 0)))
-        self.street_number_selection = toga.Selection(items=[], style=Pack(flex=1, padding=(0, 40, 0, 0)))
         # Создание списка всех городов
         select_all_cities_query = """SELECT название FROM Города"""
-        self.cur.execute(select_all_cities_query)
+        self.cur.execute(select_all_cities_query, (self.id,))
         all_cities_tuple = self.cur.fetchall()
         self.all_cities = []
         for city in all_cities_tuple:
             self.all_cities.append(city[0])
+
         self.city_selection = toga.Selection(items=self.all_cities, on_select=self.change_city_handler,
-                                             style=Pack(flex=1, padding=(0, 5, 0, 0)))
-        # Получение id выбранного города
-        select_city_id_query = """SELECT город_id
-                             FROM Города
-                             WHERE название = %s;"""
-        self.cur.execute(select_city_id_query, (self.city_selection.value,))
-        city_id = self.cur.fetchall()
-        self.city_id_result = city_id[0]
-        # Создание списка всех адресов выбранного города
+                                             style=Pack(flex=1, padding=(0, 21, 0, 20)))
+
+        # Получение id выбранного города по его названию
+        select_all_cities_query = """SELECT город_id FROM Города WHERE название = %s;"""
+        self.cur.execute(select_all_cities_query, (self.city_selection.value,))
+        self.city_id_result = self.cur.fetchone()
+
+        # Создание списка всех названий улиц выбранного города и определенного сотрудника
         select_all_street_names_query = """SELECT Улицы.название
-               FROM Дворы
-               inner join Города on Дворы.город = Города.город_id
-               inner join Улицы on Дворы.улица  = Улицы.улица_id
-               WHERE Дворы.город = %s;"""
+        FROM Улицы
+        inner join Дворы on Дворы.улица = Улицы.улица_id
+        WHERE Дворы.город = %s"""
         self.cur.execute(select_all_street_names_query, (self.city_id_result,))
         all_streets_tuple = self.cur.fetchall()
         self.all_streets = []
         for street in all_streets_tuple:
             self.all_streets.append(street[0])
-        self.street_name_selection = toga.Selection(items=self.all_streets, on_select=self.change_street_handler,
-                                                    style=Pack(flex=1, padding=(0, 5, 0, 0)))
-        # Получение id выбранной улицы
-        select_city_id_query = """SELECT Улицы.улица_id
-                            FROM Улицы
-                            inner join Дворы on Дворы.улица  = Улицы.улица_id
-                            inner join Города on Дворы.город  = Города.город_id
-                            WHERE Улицы.название = %s AND Города.город_id = %s"""
-        self.cur.execute(select_city_id_query, (self.street_name_selection.value, self.city_id_result))
-        street_id = self.cur.fetchall()
-        self.street_id_result = street_id[0]
-        # Получение списка номеров выбранной улицы из определенного города
+        self.new_all_streets = []
+        [self.new_all_streets.append(item) for item in self.all_streets if item not in self.new_all_streets]
+        self.street_name_selection = toga.Selection(items=self.new_all_streets,
+                                                    on_select=self.change_street_handler,
+                                                    style=Pack(flex=1, padding=(0, 20, 0, 20)))
+
+        # Получение списка номеров выбранной улицы из выбранного города
         select_street_numbers_query = """SELECT Улицы.номер
-               FROM Дворы
-               inner join Улицы on Дворы.улица  = Улицы.улица_id
-               inner join Города on Дворы.город  = Города.город_id
-               WHERE Улицы.улица_id = %s and Города.город_id = %s;"""
-        self.cur.execute(select_street_numbers_query, (self.street_id_result, self.city_id_result,))
+        FROM Дворы
+        inner join Улицы on Дворы.улица  = Улицы.улица_id
+        inner join Города on Дворы.город  = Города.город_id
+        WHERE Города.город_id = %s and Улицы.название = %s;"""
+        self.cur.execute(select_street_numbers_query, (self.city_id_result, self.street_name_selection.value,))
         all_street_numbers_tuple = self.cur.fetchall()
         self.all_street_numbers = []
         for street_number in all_street_numbers_tuple:
             self.all_street_numbers.append(str(street_number[0]))
         self.street_number_selection = toga.Selection(items=self.all_street_numbers,
-                                                      style=Pack(flex=1, padding=(0, 40, 0, 0)))
+                                                      style=Pack(flex=1, padding=(0, 41, 0, 0)))
 
     # Функция, обновляющая список названий улиц при изменении выбранного города
     def change_city_handler(self, *widget):
         # Получение id выбранного города
         select_city_id_query = """SELECT город_id
-                      FROM Города
-                      WHERE название = %s;"""
+        FROM Города
+        WHERE название = %s;"""
         self.cur.execute(select_city_id_query, (self.city_selection.value,))
         city_id = self.cur.fetchall()
         self.city_id_result = city_id[0]
-        # Создание списка всех адресов выбранного города
+        # Создание списка всех названий улиц выбранного города и определенного сотрудника
         select_all_street_names_query = """SELECT Улицы.название
-        FROM Дворы
-        inner join Города on Дворы.город = Города.город_id
-        inner join Улицы on Дворы.улица  = Улицы.улица_id
-        WHERE Дворы.город = %s;"""
-        self.cur.execute(select_all_street_names_query, (self.city_id_result,))
+        FROM Улицы
+        inner join Дворы on Дворы.улица  = Улицы.улица_id 
+        WHERE Дворы.город = %s"""
+        self.cur.execute(select_all_street_names_query, (self.city_id_result))
         all_streets_tuple = self.cur.fetchall()
         self.all_streets = []
         for street in all_streets_tuple:
             self.all_streets.append(street[0])
+        self.new_all_streets = []
+        [self.new_all_streets.append(item) for item in self.all_streets if item not in self.new_all_streets]
+
         # Обновление списков названий улиц и номеров улиц
         self.selections_box.remove(self.street_name_selection, self.street_number_selection)
-        self.street_name_selection = toga.Selection(items=self.all_streets, on_select=self.change_street_handler,
-                                                    style=Pack(flex=1, padding=(0, 5, 0, 0)))
+        self.street_name_selection = toga.Selection(items=self.new_all_streets, on_select=self.change_street_handler,
+                                                    style=Pack(flex=1, padding=(0, 20, 0, 20)))
         self.street_number_selection = toga.Selection(items=[], style=Pack(flex=1, padding=(0, 40, 0, 0)))
         self.selections_box.add(self.street_name_selection, self.street_number_selection)
         self.all_streets.clear()
@@ -315,20 +307,21 @@ class Clean(toga.App):
     def change_street_handler(self, *widget):
         # Получение id выбранной улицы
         select_city_id_query = """SELECT Улицы.улица_id
-                     FROM Улицы
-                     inner join Дворы on Дворы.улица  = Улицы.улица_id
-                     inner join Города on Дворы.город  = Города.город_id
-                     WHERE Улицы.название = %s AND Города.город_id = %s"""
+        FROM Улицы
+        inner join Дворы on Дворы.улица  = Улицы.улица_id
+        inner join Города on Дворы.город  = Города.город_id
+        WHERE Улицы.название = %s AND Города.город_id = %s"""
         self.cur.execute(select_city_id_query, (self.street_name_selection.value, self.city_id_result))
         street_id = self.cur.fetchall()
         self.street_id_result = street_id[0]
-        # Получение списка номеров выбранной улицы из определенного города
+        # Получение списка номеров выбранной улицы из выбранного города
         select_street_numbers_query = """SELECT Улицы.номер
         FROM Дворы
         inner join Улицы on Дворы.улица  = Улицы.улица_id
         inner join Города on Дворы.город  = Города.город_id
-        WHERE Улицы.улица_id = %s and Города.город_id = %s;"""
-        self.cur.execute(select_street_numbers_query, (self.street_id_result, self.city_id_result,))
+        WHERE Города.город_id = %s and Улицы.название = %s;"""
+        self.cur.execute(select_street_numbers_query,
+                         (self.city_id_result, self.street_name_selection.value,))
         all_street_numbers_tuple = self.cur.fetchall()
         self.all_street_numbers = []
         for street_number in all_street_numbers_tuple:
@@ -355,7 +348,7 @@ class Clean(toga.App):
         # Получение выбранного жителем адреса из списка
         self.city_selected = self.city_selection.value
         self.street_name_selected = self.street_name_selection.value
-        self.astreet_number_selected = self.street_number_selection.value
+        self.street_number_selected = self.street_number_selection.value
 
         select_address_id_query = """SELECT двор_id
         FROM Дворы
@@ -363,7 +356,7 @@ class Clean(toga.App):
         inner join Города on Дворы.город  = Города.город_id
         WHERE Города.название = %s and Улицы.название = %s and Улицы.номер = %s;"""
         self.cur.execute(select_address_id_query,
-                         (self.city_selected, self.street_name_selected, self.astreet_number_selected,))
+                         (self.city_selected, self.street_name_selected, self.street_number_selected,))
         address = self.cur.fetchone()
         self.address_result = address[0]
 
@@ -397,7 +390,7 @@ class Clean(toga.App):
                                          message="Содержимое вашего обращения:\n\n"
                                                  f"Фамилия: {self.inhabitant_surname_input.value}\n\n"
                                                  f"Имя: {self.inhabitant_name_input.value}\n\n"
-                                                 f"Адрес: {self.city_selected, self.street_name_selected, self.astreet_number_selected}\n\n"
+                                                 f"Адрес: {self.city_selected, self.street_name_selected, self.street_number_selected}\n\n"
                                                  f"Контактная информация: {self.inhabitant_phone_input.value}\n\n"
                                                  f"Текст обращения: {self.appeal_text_input.value}\n\n"
                                          )
@@ -490,7 +483,7 @@ class Clean(toga.App):
             self.work_types.append(work_type[0])
 
         # Создание выпадающего списка с типами работ
-        self.work_type_selection = toga.Selection(items=self.work_types, style=Pack(padding=(0, 30, 5, 20)))
+        self.work_type_selection = toga.Selection(items=self.work_types, style=Pack(padding=(0, 20, 5, 20)))
         self.comments_input = toga.TextInput(
             style=Pack(flex=2, padding=(0, 20, 5, 20), font_family="montserrat", font_size=12))
 
@@ -503,7 +496,7 @@ class Clean(toga.App):
         logout_button = toga.Button(
             "Выход",
             on_press=self.close_journal_window,
-            style=Pack(padding=(0, 20, 5, 20), font_family="montserrat", font_size=16)
+            style=Pack(padding=(0, 18, 5, 20), font_family="montserrat", font_size=16)
         )
 
         # Создание контейнеров
@@ -542,8 +535,9 @@ class Clean(toga.App):
         for city in all_cities_tuple:
             self.employee_all_cities.append(str(city))
 
-        self.employee_city_selection = toga.Selection(items=self.employee_all_cities, on_select=self.employee_change_city_handler,
-                                             style=Pack(flex=1, padding=(0, 21, 0, 20)))
+        self.employee_city_selection = toga.Selection(items=self.employee_all_cities,
+                                                      on_select=self.employee_change_city_handler,
+                                                      style=Pack(flex=1, padding=(0, 21, 0, 20)))
 
         # Получение id выбранного города по его названию
         select_all_cities_query = """SELECT город_id
@@ -565,11 +559,11 @@ class Clean(toga.App):
         for street in all_streets_tuple:
             self.employee_all_streets.append(street[0])
         self.new_employee_all_streets = []
-        [self.new_employee_all_streets.append(item) for item in self.employee_all_streets if item not in self.new_employee_all_streets]
-        print(self.new_employee_all_streets)
+        [self.new_employee_all_streets.append(item) for item in self.employee_all_streets if
+         item not in self.new_employee_all_streets]
         self.employee_street_name_selection = toga.Selection(items=self.new_employee_all_streets,
-                                                    on_select=self.employee_change_street_handler,
-                                                    style=Pack(flex=1, padding=(0, 20, 0, 20)))
+                                                             on_select=self.employee_change_street_handler,
+                                                             style=Pack(flex=1, padding=(0, 20, 0, 20)))
 
         # Получение списка номеров выбранной улицы из выбранного города
         select_street_numbers_query = """SELECT Улицы.номер
@@ -578,13 +572,14 @@ class Clean(toga.App):
           inner join Города on Дворы.город  = Города.город_id
           inner join Сотрудники_и_дворы on Сотрудники_и_дворы.двор  = Дворы.двор_id
           WHERE Города.город_id = %s and Улицы.название = %s and Сотрудники_и_дворы.сотрудник = %s;"""
-        self.cur.execute(select_street_numbers_query, (self.employee_city_id_result, self.employee_street_name_selection.value, self.employee_id,))
+        self.cur.execute(select_street_numbers_query,
+                         (self.employee_city_id_result, self.employee_street_name_selection.value, self.employee_id,))
         all_street_numbers_tuple = self.cur.fetchall()
         self.employee_all_street_numbers = []
         for street_number in all_street_numbers_tuple:
             self.employee_all_street_numbers.append(str(street_number[0]))
         self.employee_street_number_selection = toga.Selection(items=self.employee_all_street_numbers,
-                                                      style=Pack(flex=1, padding=(0, 24, 0, 20)))
+                                                               style=Pack(flex=1, padding=(0, 20, 0, 20)))
 
     # Функция, обновляющая список названий улиц при изменении выбранного города
     def employee_change_city_handler(self, *widget):
@@ -608,13 +603,15 @@ class Clean(toga.App):
         for street in all_streets_tuple:
             self.employee_all_streets.append(street[0])
         self.new_employee_all_streets = []
-        [self.new_employee_all_streets.append(item) for item in self.employee_all_streets if item not in self.new_employee_all_streets]
+        [self.new_employee_all_streets.append(item) for item in self.employee_all_streets if
+         item not in self.new_employee_all_streets]
 
         # Обновление списков названий улиц и номеров улиц
         self.employee_selections_box.remove(self.employee_street_name_selection, self.employee_street_number_selection)
-        self.employee_street_name_selection = toga.Selection(items=self.new_employee_all_streets, on_select=self.employee_change_street_handler,
-                                                    style=Pack(flex=1, padding=(0, 20, 0, 20)))
-        self.employee_street_number_selection = toga.Selection(items=[], style=Pack(flex=1, padding=(0, 24, 0, 20)))
+        self.employee_street_name_selection = toga.Selection(items=self.new_employee_all_streets,
+                                                             on_select=self.employee_change_street_handler,
+                                                             style=Pack(flex=1, padding=(0, 20, 0, 20)))
+        self.employee_street_number_selection = toga.Selection(items=[], style=Pack(flex=1, padding=(0, 20, 0, 20)))
         self.employee_selections_box.add(self.employee_street_name_selection, self.employee_street_number_selection)
         self.employee_all_streets.clear()
 
@@ -626,10 +623,10 @@ class Clean(toga.App):
                         inner join Дворы on Дворы.улица  = Улицы.улица_id
                         inner join Города on Дворы.город  = Города.город_id
                         WHERE Улицы.название = %s AND Города.город_id = %s"""
-        self.cur.execute(select_city_id_query, (self.employee_street_name_selection.value, self.employee_city_id_result))
+        self.cur.execute(select_city_id_query,
+                         (self.employee_street_name_selection.value, self.employee_city_id_result))
         street_id = self.cur.fetchall()
         self.employee_street_id_result = street_id[0]
-        # Получение списка номеров выбранной улицы из определенного города
         # Получение списка номеров выбранной улицы из выбранного города
         select_street_numbers_query = """SELECT Улицы.номер
                 FROM Дворы
@@ -646,7 +643,7 @@ class Clean(toga.App):
         # Обновление списка номеров улицы
         self.employee_selections_box.remove(self.employee_street_name_selection, self.employee_street_number_selection)
         self.employee_street_number_selection = toga.Selection(items=self.employee_all_street_numbers,
-                                                      style=Pack(flex=1, padding=(0, 24, 0, 20)))
+                                                               style=Pack(flex=1, padding=(0, 20, 0, 20)))
         self.employee_selections_box.add(self.employee_street_name_selection, self.employee_street_number_selection)
         self.employee_all_street_numbers.clear()
 
@@ -666,13 +663,16 @@ class Clean(toga.App):
         self.employee_street_name_selected = self.employee_street_name_selection.value
         self.employee_street_number_selected = self.employee_street_number_selection.value
 
-        select_address_id_query = """SELECT двор_id
-        FROM Дворы
+        select_address_id_query = """SELECT двор_сотрудника_id
+        FROM Сотрудники_и_дворы
+        inner join Дворы on Сотрудники_и_дворы.двор  = Дворы.двор_id 
         inner join Улицы on Дворы.улица  = Улицы.улица_id
         inner join Города on Дворы.город  = Города.город_id
-        WHERE Города.название = %s and Улицы.название = %s and Улицы.номер = %s;"""
+        inner join Сотрудники on Сотрудники_и_дворы.сотрудник  = Сотрудники.сотрудник_id 
+        WHERE Города.название = %s and Улицы.название = %s and Улицы.номер = %s and Сотрудники.сотрудник_id = %s"""
         self.cur.execute(select_address_id_query,
-                         (self.employee_city_selected, self.employee_street_name_selected, self.employee_street_number_selected,))
+                         (self.employee_city_selected, self.employee_street_name_selected,
+                          self.employee_street_number_selected, self.employee_id))
         employees_addresses = self.cur.fetchone()
         self.employee_address_id = employees_addresses[0]
 
