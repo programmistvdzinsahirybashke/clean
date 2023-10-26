@@ -28,6 +28,26 @@ class Clean(toga.App):
     ):
         super().__init__(formal_name, app_id, app_name, id, icon, author, version, home_page, description, startup,
                          windows, on_exit, factory)
+        self.employee_and_address_id_result = None
+        self.employee_address_id = None
+        self.employee_street_number_selected = None
+        self.employee_street_name_selected = None
+        self.employee_city_selected = None
+        self.employee_street_id_result = None
+        self.employee_street_number_selection = None
+        self.employee_all_street_numbers = None
+        self.employee_street_name_selection = None
+        self.new_employee_all_streets = None
+        self.employee_all_streets = None
+        self.employee_city_id_result = None
+        self.employee_city_selection = None
+        self.employee_all_cities = None
+        self.employee_selections_box = None
+        self.street_number_selected = None
+        self.street_name_selected = None
+        self.city_selected = None
+        self.new_all_streets = None
+        self.selections_box = None
         self.all_street_numbers = None
         self.street_id_result = None
         self.all_streets = None
@@ -137,21 +157,21 @@ class Clean(toga.App):
         self.cur.execute(f'SELECT логин FROM Сотрудники WHERE пароль =%s;', (self.password_input.value,))
         check_login = self.cur.fetchall()
 
-        # # Проверка введенного логина и пароля на существование и соответствие в базе данных
-        # if check_pass and check_pass[0][0] == self.password_input.value and check_login and check_login[0][
-        #     0] == self.login_input.value:
-        #     select_employee_id_on_login_query = """SELECT сотрудник_id
-        #     FROM Сотрудники
-        #     WHERE логин = %s AND пароль = %s;"""
-        #     self.cur.execute(select_employee_id_on_login_query, (self.login_input.value, self.password_input.value,))
-        #     employee_id = self.cur.fetchone()
-        self.employee_id = 1
-        self.open_journal_window(widget)
-        # else:
-        #     # Вызов диалогового окна с ошибкой неправильного логина или пароля
-        #     self.main_window.error_dialog("Неверный логин или пароль",
-        #                                   "Вы ввели неверный логин или пароль. Попробуйте еще раз.")
-        #     return
+        # Проверка введенного логина и пароля на существование и соответствие в базе данных
+        if check_pass and check_pass[0][0] == self.password_input.value and check_login and check_login[0][
+            0] == self.login_input.value:
+            select_employee_id_on_login_query = """SELECT сотрудник_id
+            FROM Сотрудники
+            WHERE логин = %s AND пароль = %s;"""
+            self.cur.execute(select_employee_id_on_login_query, (self.login_input.value, self.password_input.value,))
+            employee_id = self.cur.fetchone()
+            self.employee_id = employee_id[0]
+            self.open_journal_window(widget)
+        else:
+            # Вызов диалогового окна с ошибкой неправильного логина или пароля
+            self.main_window.error_dialog("Неверный логин или пароль",
+                                          "Вы ввели неверный логин или пароль. Попробуйте еще раз.")
+            return
 
     # Функция, создающая окно отправки обратной связи
     def create_feedback_window(self):
@@ -287,7 +307,7 @@ class Clean(toga.App):
         FROM Улицы
         inner join Дворы on Дворы.улица  = Улицы.улица_id 
         WHERE Дворы.город = %s"""
-        self.cur.execute(select_all_street_names_query, (self.city_id_result))
+        self.cur.execute(select_all_street_names_query, (self.city_id_result,))
         all_streets_tuple = self.cur.fetchall()
         self.all_streets = []
         for street in all_streets_tuple:
@@ -390,7 +410,7 @@ class Clean(toga.App):
                                          message="Содержимое вашего обращения:\n\n"
                                                  f"Фамилия: {self.inhabitant_surname_input.value}\n\n"
                                                  f"Имя: {self.inhabitant_name_input.value}\n\n"
-                                                 f"Адрес: {self.city_selected, self.street_name_selected, self.street_number_selected}\n\n"
+                                                 f"Адрес: {self.city_selected}, {self.street_name_selected}, {self.street_number_selected}\n\n"
                                                  f"Контактная информация: {self.inhabitant_phone_input.value}\n\n"
                                                  f"Текст обращения: {self.appeal_text_input.value}\n\n"
                                          )
@@ -717,7 +737,7 @@ class Clean(toga.App):
         self.journal_window.info_dialog(title="Запись добавлена в журнал",
                                         message="Содержимое записи:\n\n"
                                                 f"Сотрудник: {self.employee_full_name[0]} {self.employee_full_name[1]} {self.employee_full_name[2]}\n\n"
-                                                f"Проделал работу по адресу: {self.employee_city_selected, self.employee_street_name_selected, self.employee_street_number_selected}\n\n"
+                                                f"Проделал работу по адресу: {self.employee_city_selected}, {self.employee_street_name_selected}, {self.employee_street_number_selected}\n\n"
                                                 f"Дата и время добавления записи: {self.journal_insert_time_result}\n\n"
                                                 f"Тип выполненных работ: {self.work_type_selected}\n\n"
                                                 f"Комментарий сотрудника: {self.comments_result}\n\n"
