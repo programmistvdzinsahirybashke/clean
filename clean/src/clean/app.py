@@ -28,6 +28,7 @@ class Clean(toga.App):
     ):
         super().__init__(formal_name, app_id, app_name, id, icon, author, version, home_page, description, startup,
                          windows, on_exit, factory)
+        self.new_employee_all_cities = None
         self.employee_and_address_id_result = None
         self.employee_address_id = None
         self.employee_street_number_selected = None
@@ -89,7 +90,7 @@ class Clean(toga.App):
         self.cur = None
         self.conn = None
 
-    # Функция, запускающая приложение и открывающая главное окно программы
+    # Функция, запускающая приложение и открывающая главное окно программы (авторизации)
     def startup(self):
         try:
             # Пытаемся подключиться к базе данных
@@ -102,7 +103,7 @@ class Clean(toga.App):
             print(e)
             print('Can`t establish connection to database')
 
-        # Создание названий полей
+        # Создание названий полей ввода
         login_label = toga.Label(
             "Введите логин: ",
             style=Pack(padding=(0, 8, 0, 8), font_family="montserrat", font_size=12)
@@ -124,7 +125,7 @@ class Clean(toga.App):
             style=Pack(padding=(10, 18, 5, 8), font_family="montserrat", font_size=14)
         )
 
-        # Создание полей ввода
+        # Создание полей ввода логина и пароля
         self.login_input = toga.TextInput(
             style=Pack(width=500, padding=(0, 35, 0, -1), font_family="montserrat", font_size=10))
         self.password_input = toga.PasswordInput(
@@ -149,7 +150,7 @@ class Clean(toga.App):
         self.main_window.content = auth_main_box
         self.main_window.show()
 
-    # Функция, проверяющая логин и пароль после нажатия кнопки
+    # Функция, проверяющая существование и соответствие логина и пароля после нажатия кнопки
     def user_login(self, widget):
         # Получение введенных логина и пароля из базы данных
         self.cur.execute('SELECT пароль FROM Сотрудники WHERE логин = %s;', (self.login_input.value,))
@@ -157,9 +158,8 @@ class Clean(toga.App):
         self.cur.execute(f'SELECT логин FROM Сотрудники WHERE пароль =%s;', (self.password_input.value,))
         check_login = self.cur.fetchall()
 
-        # Проверка введенного логина и пароля на существование и соответствие в базе данных
-        if check_pass and check_pass[0][0] == self.password_input.value and check_login and check_login[0][
-            0] == self.login_input.value:
+        # Проверка введенного логина и пароля на пустоту и на существование и соответствие в базе данных
+        if check_pass and check_pass[0][0] == self.password_input.value and check_login and check_login[0][0] == self.login_input.value:
             select_employee_id_on_login_query = """SELECT сотрудник_id
             FROM Сотрудники
             WHERE логин = %s AND пароль = %s;"""
@@ -168,14 +168,14 @@ class Clean(toga.App):
             self.employee_id = employee_id[0]
             self.open_journal_window(widget)
         else:
-            # Вызов диалогового окна с ошибкой неправильного логина или пароля
+            # Вызов диалогового окна с ошибкой ввода неправильного логина или пароля
             self.main_window.error_dialog("Неверный логин или пароль",
                                           "Вы ввели неверный логин или пароль. Попробуйте еще раз.")
             return
 
     # Функция, создающая окно отправки обратной связи
     def create_feedback_window(self):
-        # Создание названий полей
+        # Создание названий полей ввода
         inhabitant_surname_label = toga.Label(
             "Ваша фамилия: ",
             style=Pack(padding=(0, 20, 5, 20), font_family="montserrat", font_size=14)
@@ -196,7 +196,7 @@ class Clean(toga.App):
             "Введите текст обращения (жалобы): ",
             style=Pack(padding=(0, 20, 5, 20), font_family="montserrat", font_size=14)
         )
-        # Создание полей ввода
+        # Создание полей ввода фамилии, имени, телефона и текста обращения
         self.inhabitant_surname_input = toga.TextInput(
             style=Pack(padding=(0, 20, 5, 20), font_family="montserrat", font_size=12))
         self.inhabitant_name_input = toga.TextInput(
@@ -254,7 +254,6 @@ class Clean(toga.App):
         self.all_cities = []
         for city in all_cities_tuple:
             self.all_cities.append(city[0])
-
         self.city_selection = toga.Selection(items=self.all_cities, on_select=self.change_city_handler,
                                              style=Pack(flex=1, padding=(0, 21, 0, 20)))
 
@@ -295,14 +294,14 @@ class Clean(toga.App):
 
     # Функция, обновляющая список названий улиц при изменении выбранного города
     def change_city_handler(self, *widget):
-        # Получение id выбранного города
+        # Получение id выбранного города по его названию
         select_city_id_query = """SELECT город_id
         FROM Города
         WHERE название = %s;"""
         self.cur.execute(select_city_id_query, (self.city_selection.value,))
         city_id = self.cur.fetchall()
         self.city_id_result = city_id[0]
-        # Создание списка всех названий улиц выбранного города и определенного сотрудника
+        # Создание списка всех названий улиц выбранного города по его id
         select_all_street_names_query = """SELECT Улицы.название
         FROM Улицы
         inner join Дворы on Дворы.улица  = Улицы.улица_id 
@@ -325,7 +324,7 @@ class Clean(toga.App):
 
     # Функция, обновляющая список номеров улиц при изменении выбранной улицы
     def change_street_handler(self, *widget):
-        # Получение id выбранной улицы
+        # Получение id выбранной улицы из определенного города по названию улицы и id города
         select_city_id_query = """SELECT Улицы.улица_id
         FROM Улицы
         inner join Дворы on Дворы.улица  = Улицы.улица_id
@@ -346,7 +345,7 @@ class Clean(toga.App):
         self.all_street_numbers = []
         for street_number in all_street_numbers_tuple:
             self.all_street_numbers.append(str(street_number[0]))
-        # Обновление списка номеров улицы
+        # Обновление списка номеров выбранной улицы
         self.selections_box.remove(self.street_name_selection, self.street_number_selection)
         self.street_number_selection = toga.Selection(items=self.all_street_numbers,
                                                       style=Pack(flex=1, padding=(0, 40, 0, 0)))
@@ -365,7 +364,7 @@ class Clean(toga.App):
         )
         self.cur.execute(insert_inhabitant_full_name_query)
 
-        # Получение выбранного жителем адреса из списка
+        # Получение выбранного жителем двора по названию города, названию улицы и номеру улицы
         self.city_selected = self.city_selection.value
         self.street_name_selected = self.street_name_selection.value
         self.street_number_selected = self.street_number_selection.value
@@ -392,7 +391,7 @@ class Clean(toga.App):
         inhabitant_id = self.cur.fetchone()
         self.inhabitant_id_result = inhabitant_id[0]
 
-        # SQL-запрос для вставки данных обращения в таблицу Обращения
+        # SQL-запрос для вставки данных обращения в таблицу Жалобы_и_предложения
         insert_feedback_query = sql.SQL(
             "INSERT INTO Жалобы_и_предложения (двор_id, текст, дата_и_время_подачи, житель_id) VALUES ("
             "{}, {}, {}, {});").format(
@@ -414,7 +413,7 @@ class Clean(toga.App):
                                                  f"Контактная информация: {self.inhabitant_phone_input.value}\n\n"
                                                  f"Текст обращения: {self.appeal_text_input.value}\n\n"
                                          )
-        # Очистка полей
+        # Очистка полей ввода и сброс выбранного адреса
         self.inhabitant_surname_input.clear()
         self.inhabitant_name_input.clear()
         self.city_selection.value = self.all_cities[0]
@@ -447,7 +446,7 @@ class Clean(toga.App):
 
     # Функция, создающая окна журнала работ
     def create_journal_window(self):
-        # Создание названий полей
+        # Создание названий полей ввода
         employee_label = toga.Label(
             "Сотрудник: ",
             style=Pack(padding=(0, 20, 5, 20), font_family="montserrat", font_size=14)
@@ -478,10 +477,10 @@ class Clean(toga.App):
         self.employee_journal_input = toga.TextInput(
             value=self.employee_full_name[0] + " " + self.employee_full_name[1] + " " + self.employee_full_name[2],
             readonly=True, style=Pack(padding=(0, 20, 5, 20), font_family="montserrat", font_size=12))
-
+        # Обработка выбранного сотрудником адреса (двора)
         self.employee_select_address()
         self.employee_selections_box = toga.Box(style=Pack(direction=ROW))
-
+        # Добавление полей выбора адреса
         self.employee_selections_box.add(address_label, self.employee_city_selection,
                                          self.employee_street_name_selection, self.employee_street_number_selection)
 
@@ -507,7 +506,7 @@ class Clean(toga.App):
         self.comments_input = toga.TextInput(
             style=Pack(flex=2, padding=(0, 20, 5, 20), font_family="montserrat", font_size=12))
 
-        # Создание кнопок окна с журналом работ
+        # Создание кнопок журнала работ
         add_journal_entry_button = toga.Button(
             "Добавить уборку в журнал",
             on_press=self.insert_into_journal,
@@ -550,12 +549,14 @@ class Clean(toga.App):
         inner join Сотрудники on Сотрудники_и_дворы.сотрудник  = Сотрудники.сотрудник_id 
         WHERE Сотрудники_и_дворы.сотрудник = %s;"""
         self.cur.execute(select_all_cities_query, (self.employee_id,))
-        all_cities_tuple = self.cur.fetchone()
+        all_cities_tuple = self.cur.fetchall()
         self.employee_all_cities = []
         for city in all_cities_tuple:
-            self.employee_all_cities.append(str(city))
+            self.employee_all_cities.append(str(city[0]))
+        self.new_employee_all_cities = []
+        [self.new_employee_all_cities.append(item) for item in self.employee_all_cities if item not in self.new_employee_all_cities]
 
-        self.employee_city_selection = toga.Selection(items=self.employee_all_cities,
+        self.employee_city_selection = toga.Selection(items=self.new_employee_all_cities,
                                                       on_select=self.employee_change_city_handler,
                                                       style=Pack(flex=1, padding=(0, 21, 0, 20)))
 
@@ -708,10 +709,12 @@ class Clean(toga.App):
 
         # Получение id типа выполненной работы по его названию
         self.work_type_selected = self.work_type_selection.value
-        select_query = """SELECT тип_работы_id 
-        FROM Типы_работ 
-        WHERE название = %s;"""
-        self.cur.execute(select_query, (self.work_type_selected,))
+        select_query = """SELECT должность_и_тип_работы_id
+        FROM Должности_и_типы_работ
+        inner join Сотрудники on Сотрудники.должность = Должности_и_типы_работ.должность
+        inner join Типы_работ on Типы_работ.тип_работы_id = Должности_и_типы_работ.тип_работы
+        WHERE  Типы_работ.название  = %s and Сотрудники.сотрудник_id = %s"""
+        self.cur.execute(select_query, (self.work_type_selected, self.employee_id))
         work_type = self.cur.fetchone()
         self.work_type_id_result = work_type[0]
 
@@ -722,7 +725,7 @@ class Clean(toga.App):
 
         # SQL-запрос для вставки данных в таблицу Журнал работ
         insert_result_query = sql.SQL(
-            "INSERT INTO Журнал_уборки (двор_и_сотрудник, тип_работ, дата_и_время_уборки, комментарий) VALUES ("
+            "INSERT INTO Журнал_уборки (двор_и_сотрудник, должность_и_тип_работ, дата_и_время_уборки, комментарий) VALUES ("
             "{}, {}, {}, {});").format(
             sql.Literal(self.employee_and_address_id_result),
             sql.Literal(self.work_type_id_result),
